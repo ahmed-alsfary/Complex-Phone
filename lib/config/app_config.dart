@@ -2,7 +2,8 @@
 class AppConfig {
   AppConfig._();
 
-  static const String apiBaseUrl = 'http://10.10.9.71:5216';
+  /// أصل الـ API (المسارات في الخدمات تبدأ بـ /api/...)
+  static const String apiBaseUrl = 'https://apicomplex.solidcode-iq.com';
 
   /// معرّف المجمع الثابت لهذا التطبيق
   static const String complexId = '08df1fb2-f274-4c28-85ea-eb38f9d1a1c4';

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/resident_provider.dart';
+import '../providers/settings_provider.dart';
 import 'contracts_screen.dart';
 import 'home_screen.dart';
 import 'installments_screen.dart';
@@ -58,11 +59,14 @@ class _ShellScreenState extends State<ShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsProvider>().s;
+    final surface = Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface;
+
     return Scaffold(
       body: IndexedStack(index: index, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: surface,
           border: const Border(top: BorderSide(color: AppTheme.border)),
           boxShadow: [
             BoxShadow(
@@ -75,31 +79,31 @@ class _ShellScreenState extends State<ShellScreen> {
         child: NavigationBar(
           selectedIndex: index,
           onDestinationSelected: _onDestinationSelected,
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'الرئيسية',
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home_rounded),
+              label: s.home,
             ),
             NavigationDestination(
-              icon: Icon(Icons.home_work_outlined),
-              selectedIcon: Icon(Icons.home_work_rounded),
-              label: 'وحدتي',
+              icon: const Icon(Icons.home_work_outlined),
+              selectedIcon: const Icon(Icons.home_work_rounded),
+              label: s.myUnit,
             ),
             NavigationDestination(
-              icon: Icon(Icons.payments_outlined),
-              selectedIcon: Icon(Icons.payments_rounded),
-              label: 'الأقساط',
+              icon: const Icon(Icons.payments_outlined),
+              selectedIcon: const Icon(Icons.payments_rounded),
+              label: s.installments,
             ),
             NavigationDestination(
-              icon: Icon(Icons.description_outlined),
-              selectedIcon: Icon(Icons.description_rounded),
-              label: 'العقود',
+              icon: const Icon(Icons.description_outlined),
+              selectedIcon: const Icon(Icons.description_rounded),
+              label: s.contracts,
             ),
             NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
-              label: 'حسابي',
+              icon: const Icon(Icons.person_outline_rounded),
+              selectedIcon: const Icon(Icons.person_rounded),
+              label: s.profile,
             ),
           ],
         ),

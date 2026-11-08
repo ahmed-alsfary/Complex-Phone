@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
+import '../core/l10n.dart';
 import '../core/theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/resident_provider.dart';
-import '../utils/labels.dart';
+import '../providers/settings_provider.dart';
+import '../widgets/ads_carousel.dart';
+import '../widgets/brand_logo.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/info_row.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/status_chip.dart';
+import 'family_screen.dart';
+import 'notifications_screen.dart';
+import 'services_bills_screen.dart';
+import 'vehicles_screen.dart';
+import 'visitors_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,28 +31,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return context.read<ResidentProvider>().loadHome(auth);
   }
 
-  Color _installmentColor(int? status) {
-    switch (status) {
-      case 2:
-        return AppTheme.success;
-      case 4:
-        return AppTheme.danger;
-      case 3:
-        return AppTheme.info;
-      default:
-        return AppTheme.warning;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final resident = context.watch<ResidentProvider>();
+    final settings = context.watch<SettingsProvider>();
+    final s = settings.s;
     final profile = resident.profile;
     final overdue = resident.installments.where((i) => i.status == 4).length;
     final unpaid = resident.installments.where((i) => i.status == 1 || i.status == 3).length;
     final paid = resident.installments.where((i) => i.status == 2).length;
-    final name = profile?.primaryResidentName ?? auth.user?.displayName ?? '';
+    final name = profile?.displayName.isNotEmpty == true
+        ? profile!.displayName
+        : (auth.user?.displayName ?? '');
 
     return Scaffold(
       body: RefreshIndicator(
@@ -61,13 +58,13 @@ class _HomeScreenState extends State<HomeScreen> {
               title: Column(
                 children: [
                   Text(
-                    auth.user?.complexName ?? AppConfig.appTitle,
+                    auth.user?.complexName ?? s.appTitle,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                   ),
                   Text(
-                    'خدمات الساكن',
+                    s.residentServices,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.muted,
                           fontWeight: FontWeight.w600,
@@ -76,16 +73,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               actions: [
+                PopupMenuButton<AppLang>(
+                  tooltip: s.language,
+                  icon: const Icon(Icons.translate_rounded),
+                  onSelected: settings.setLang,
+                  itemBuilder: (_) => AppLang.values
+                      .map(
+                        (l) => PopupMenuItem(
+                          value: l,
+                          child: Text(
+                            l.label,
+                            style: TextStyle(
+                              fontWeight: settings.lang == l ? FontWeight.w800 : FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
                 IconButton(
-                  tooltip: 'تحديث',
-                  onPressed: resident.loading ? null : _refresh,
-                  icon: resident.loading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh_rounded),
+                  tooltip: settings.isDark ? s.lightMode : s.darkMode,
+                  onPressed: settings.toggleTheme,
+                  icon: Icon(settings.isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+                ),
+                IconButton(
+                  tooltip: s.notifications,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.notifications_none_rounded),
                 ),
               ],
             ),
@@ -120,8 +138,54 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 12),
                       _ErrorBanner(message: resident.error!),
                     ],
+                    const SizedBox(height: 14),
+                    AdsCarousel(complexId: auth.user?.complexId ?? AppConfig.complexId),
+                    const SizedBox(height: 14),
+                    _QuickLink(
+                      icon: Icons.bolt_rounded,
+                      title: s.servicesBills,
+                      subtitle: s.servicesBillsHint,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const ServicesBillsScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _QuickLink(
+                      icon: Icons.qr_code_2_rounded,
+                      title: s.visitorPass,
+                      subtitle: s.visitorPassHint,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const VisitorsScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _QuickLink(
+                      icon: Icons.directions_car_rounded,
+                      title: s.vehicles,
+                      subtitle: s.addVehicle,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const VehiclesScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _QuickLink(
+                      icon: Icons.groups_rounded,
+                      title: s.family,
+                      subtitle: s.updateInfo,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const FamilyScreen()),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 18),
-                    const SectionHeader(title: 'نظرة سريعة'),
+                    SectionHeader(title: s.overview),
                     GridView.count(
                       crossAxisCount: 2,
                       shrinkWrap: true,
@@ -155,131 +219,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    const SectionHeader(title: 'بيانات الوحدة'),
-                    InfoCard(
-                      children: [
-                        InfoRow(
-                          label: 'الوحدة',
-                          value: profile?.unitNumber ?? '—',
-                          icon: Icons.door_front_door_outlined,
-                        ),
-                        InfoRow(
-                          label: 'المبنى',
-                          value: profile?.buildingName ?? '—',
-                          icon: Icons.apartment_outlined,
-                        ),
-                        InfoRow(
-                          label: 'نوع الإشغال',
-                          value: occupancyTypeLabel(profile?.occupancyType),
-                          icon: Icons.badge_outlined,
-                        ),
-                        InfoRow(
-                          label: 'الحالة',
-                          value: residentStatusLabel(profile?.status),
-                          icon: Icons.verified_outlined,
-                        ),
-                        InfoRow(
-                          label: 'تاريخ الدخول',
-                          value: formatDate(profile?.moveInDate),
-                          icon: Icons.calendar_today_outlined,
-                        ),
-                        if (resident.unit != null) ...[
-                          InfoRow(
-                            label: 'المساحة',
-                            value: '${resident.unit!.area} م²',
-                            icon: Icons.square_foot_outlined,
-                          ),
-                          InfoRow(
-                            label: 'الغرف',
-                            value: '${resident.unit!.bedrooms}',
-                            icon: Icons.bed_outlined,
-                          ),
-                          InfoRow(
-                            label: 'الحمامات',
-                            value: '${resident.unit!.bathrooms}',
-                            icon: Icons.bathtub_outlined,
-                            showDivider: false,
-                          ),
-                        ] else
-                          const InfoRow(
-                            label: 'تفاصيل إضافية',
-                            value: '—',
-                            showDivider: false,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const SectionHeader(title: 'أقرب الأقساط'),
-                    if (resident.installments.isEmpty)
-                      const Card(
-                        child: EmptyState(message: 'لا توجد أقساط مرتبطة بحسابك'),
-                      )
-                    else
-                      ...resident.installments.take(5).map((item) {
-                        final color = _installmentColor(item.status);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 46,
-                                    height: 46,
-                                    decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(Icons.payments_outlined, color: color, size: 22),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.name?.isNotEmpty == true
-                                              ? item.name!
-                                              : formatMoney(item.amount),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 14.5,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'الاستحقاق: ${formatDate(item.dueDate)}',
-                                          style: const TextStyle(
-                                            color: AppTheme.muted,
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          formatMoney(item.amount),
-                                          style: TextStyle(
-                                            color: color,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 12.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  StatusChip(
-                                    label: installmentStatusLabel(item.status),
-                                    color: color,
-                                    compact: true,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
                   ]),
                 ),
               ),
@@ -350,6 +289,13 @@ class _WelcomeCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  const BrandLogo(
+                    size: 52,
+                    padding: 6,
+                    borderRadius: 16,
+                    backgroundColor: Color(0x33FFFFFF),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       name.isEmpty ? 'مرحباً بك' : 'مرحباً، $name',
@@ -442,6 +388,74 @@ class _ErrorBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickLink extends StatelessWidget {
+  const _QuickLink({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).cardTheme.color ?? Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppTheme.brandMid.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: AppTheme.brandMid),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppTheme.muted,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_left_rounded, color: AppTheme.muted),
+            ],
+          ),
+        ),
       ),
     );
   }

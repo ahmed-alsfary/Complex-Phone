@@ -173,6 +173,11 @@ class ResidentProvider extends ChangeNotifier {
     }
   }
 
+  void applyProfile(ResidentProfile updated) {
+    profile = updated;
+    notifyListeners();
+  }
+
   void clear() {
     _requestId++;
     profile = null;

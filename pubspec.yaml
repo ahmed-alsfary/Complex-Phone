@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.2
+  sdk: '>=3.10.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -17,6 +17,8 @@ dependencies:
   provider: ^6.1.5
   intl: ^0.20.2
   google_fonts: ^6.2.1
+  qr_flutter: ^4.1.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +27,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/logo.png

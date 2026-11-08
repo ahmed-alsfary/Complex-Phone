@@ -88,6 +88,9 @@ class ApiClient {
       if (data is Map) {
         return map(Map<String, dynamic>.from(data));
       }
+      if (data is List) {
+        return map(data);
+      }
       return map(data);
     }
 
@@ -130,6 +133,50 @@ class ApiClient {
   }) async {
     try {
       final res = await _dio.post(path, data: data, queryParameters: query);
+      return unwrap(res, map);
+    } on DioException catch (e) {
+      throw _fromDio(e);
+    }
+  }
+
+  Future<T> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? query,
+    required T Function(dynamic data) map,
+  }) async {
+    try {
+      final res = await _dio.put(path, data: data, queryParameters: query);
+      return unwrap(res, map);
+    } on DioException catch (e) {
+      throw _fromDio(e);
+    }
+  }
+
+  Future<T> delete<T>(
+    String path, {
+    Map<String, dynamic>? query,
+    required T Function(dynamic data) map,
+  }) async {
+    try {
+      final res = await _dio.delete(path, queryParameters: query);
+      return unwrap(res, map);
+    } on DioException catch (e) {
+      throw _fromDio(e);
+    }
+  }
+
+  Future<T> postMultipart<T>(
+    String path, {
+    required FormData data,
+    required T Function(dynamic data) map,
+  }) async {
+    try {
+      final res = await _dio.post(
+        path,
+        data: data,
+        options: Options(contentType: 'multipart/form-data'),
+      );
       return unwrap(res, map);
     } on DioException catch (e) {
       throw _fromDio(e);

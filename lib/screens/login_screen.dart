@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../core/theme.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/brand_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -90,20 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       children: [
                         const SizedBox(height: 12),
-                        Container(
-                          width: 78,
-                          height: 78,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                          ),
-                          child: const Icon(
-                            Icons.apartment_rounded,
-                            size: 40,
-                            color: Colors.white,
-                          ),
-                        ),
+                        const BrandLogo(size: 96, padding: 12, borderRadius: 28),
                         const SizedBox(height: 18),
                         Text(
                           AppConfig.appTitle,

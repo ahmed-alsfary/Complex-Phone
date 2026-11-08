@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_config.dart';
 import '../core/theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/resident_provider.dart';
+import '../services/resident_service.dart';
 import '../utils/labels.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/info_row.dart';
 import '../widgets/section_header.dart';
+import 'edit_profile_screen.dart';
+import 'family_screen.dart';
+import 'vehicles_screen.dart';
+import 'visitors_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  String? _photoUrl(String? path) {
+    if (path == null || path.trim().isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    return '${AppConfig.apiBaseUrl}$path';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,10 +30,28 @@ class ProfileScreen extends StatelessWidget {
     final resident = context.watch<ResidentProvider>();
     final profile = resident.profile;
     final user = auth.user;
-    final displayName = profile?.primaryResidentName ?? user?.displayName ?? '—';
+    final displayName = profile?.displayName.isNotEmpty == true
+        ? profile!.displayName
+        : (profile?.primaryResidentName ?? user?.displayName ?? '—');
+    final photo = _photoUrl(profile?.profilePhotoUrl);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('حسابي')),
+      appBar: AppBar(
+        title: const Text('حسابي'),
+        actions: [
+          if (profile != null)
+            TextButton(
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => EditProfileScreen(profile: profile),
+                  ),
+                );
+              },
+              child: const Text('تعديل'),
+            ),
+        ],
+      ),
       body: RefreshIndicator(
         color: AppTheme.brandMid,
         onRefresh: () => context.read<ResidentProvider>().loadProfile(auth),
@@ -53,21 +83,31 @@ class ProfileScreen extends StatelessWidget {
                             width: 64,
                             height: 64,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppTheme.brand, AppTheme.brandLight],
-                              ),
+                              gradient: photo == null
+                                  ? const LinearGradient(
+                                      colors: [AppTheme.brand, AppTheme.brandLight],
+                                    )
+                                  : null,
+                              image: photo != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(photo),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Center(
-                              child: Text(
-                                _initials(displayName),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 20,
-                                ),
-                              ),
-                            ),
+                            child: photo == null
+                                ? Center(
+                                    child: Text(
+                                      _initials(displayName),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -116,14 +156,70 @@ class ProfileScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const VisitorsScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.qr_code_2_rounded),
+                      label: const Text('تصاريح الزوار'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const VehiclesScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.directions_car_outlined),
+                      label: const Text('مركباتي'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const FamilyScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.groups_outlined),
+                      label: const Text('أفراد الأسرة والتابعين'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                    ),
                     const SizedBox(height: 18),
-                    const SectionHeader(title: 'بيانات التواصل'),
+                    const SectionHeader(title: 'المعلومات الشخصية'),
                     InfoCard(
                       children: [
+                        InfoRow(
+                          label: 'الاسم المستعار',
+                          value: (profile.nickname ?? '').isEmpty ? '—' : profile.nickname!,
+                          icon: Icons.badge_outlined,
+                        ),
+                        InfoRow(
+                          label: 'تاريخ الميلاد',
+                          value: formatDate(profile.birthDate),
+                          icon: Icons.cake_outlined,
+                        ),
                         InfoRow(
                           label: 'الهاتف',
                           value: profile.phone ?? user?.phone ?? '—',
                           icon: Icons.phone_outlined,
+                        ),
+                        InfoRow(
+                          label: 'هاتف ثانٍ',
+                          value: (profile.secondaryPhone ?? '').isEmpty
+                              ? '—'
+                              : profile.secondaryPhone!,
+                          icon: Icons.phone_android_outlined,
                         ),
                         InfoRow(
                           label: 'البريد',
@@ -131,19 +227,9 @@ class ProfileScreen extends StatelessWidget {
                           icon: Icons.mail_outline_rounded,
                         ),
                         InfoRow(
-                          label: 'الهوية',
-                          value: profile.nationalId ?? '—',
-                          icon: Icons.badge_outlined,
-                        ),
-                        InfoRow(
-                          label: 'الطوارئ',
-                          value: profile.emergencyContactName ?? '—',
-                          icon: Icons.contact_emergency_outlined,
-                        ),
-                        InfoRow(
-                          label: 'هاتف الطوارئ',
-                          value: profile.emergencyPhone ?? '—',
-                          icon: Icons.phone_in_talk_outlined,
+                          label: 'رمز الدخول',
+                          value: profile.hasLoginCode ? 'مفعّل' : 'غير مفعّل',
+                          icon: Icons.lock_outline_rounded,
                           showDivider: false,
                         ),
                       ],
@@ -246,15 +332,70 @@ class ProfileScreen extends StatelessWidget {
                     icon: const Icon(Icons.logout_rounded),
                     label: const Text('تسجيل الخروج'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.danger,
-                      side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.35)),
+                      foregroundColor: AppTheme.brandMid,
+                      side: const BorderSide(color: AppTheme.border),
                       minimumSize: const Size.fromHeight(50),
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () => _confirmDeleteAccount(context, auth, profile!.id),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.danger,
+                      minimumSize: const Size.fromHeight(44),
+                    ),
+                    child: const Text('حذف الحساب'),
                   ),
                 ],
               ),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    AuthProvider auth,
+    String residentId,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تأكيد حذف الحساب'),
+        content: const Text('هل أنت متأكد من حذف الحساب؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف الحساب'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await context.read<ResidentService>().selfDelete(residentId);
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // loading
+      context.read<ResidentProvider>().clear();
+      await auth.logout();
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   String _initials(String name) {
